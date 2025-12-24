@@ -1,3 +1,5 @@
+const API_BASE = "https://rooms-sdu2.onrender.com";
+
 // src/api/bookingsApi.ts
 export type BookingDto = {
   id: string;
