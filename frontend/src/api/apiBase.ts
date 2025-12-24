@@ -1,2 +1,4 @@
-// src/api/apiBase.ts
-export const API_BASE: string = import.meta.env.VITE_API_BASE_URL ?? "";
+export const API_BASE =
+  location.hostname === "inadequate53.github.io"
+    ? "https://rooms-sdu2.onrender.com"
+    : "";
