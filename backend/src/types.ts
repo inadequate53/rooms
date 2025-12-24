@@ -107,6 +107,13 @@ export const Health = T.Object({
 });
 export type Health = Static<typeof Health>;
 
+export const AuditoriumCreateBody = T.Object({
+  name: T.String({
+    description: "Название аудитории",
+  }),
+});
+export type AuditoriumCreateBody = Static<typeof AuditoriumCreateBody>;
+
 export const BookingCreateBody = T.Object({
   title: T.String({
      description: "Название брони",

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 import { Box, Paper, Stack, TextField, Typography } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
@@ -7,10 +8,11 @@ interface DateTimeSectionProps {
 }
 
 export function DateTimeSection({ onCompletionChange }: DateTimeSectionProps) {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const { register, watch } = useFormContext<any>();
+  const startDate = watch("startDate");
+  const endDate = watch("endDate");
+  const startTime = watch("startTime");
+  const endTime = watch("endTime");
 
   useEffect(() => {
     const completed = !!startDate && !!endDate && !!startTime && !!endTime;
@@ -29,7 +31,6 @@ export function DateTimeSection({ onCompletionChange }: DateTimeSectionProps) {
         bgcolor: "background.paper",
       }}
     >
-      {/* Заголовок карточки */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
         <Box
           sx={{
@@ -56,51 +57,42 @@ export function DateTimeSection({ onCompletionChange }: DateTimeSectionProps) {
         </Box>
       </Stack>
 
-      {/* Форма: 2 строки по 2 поля */}
       <Stack spacing={2}>
-        {/* Дата начала / окончания */}
         <Stack direction="row" spacing={2}>
           <TextField
             fullWidth
             label="Дата начала"
             type="date"
             size="small"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
+            {...register("startDate")}
           />
-
           <TextField
             fullWidth
             label="Дата окончания"
             type="date"
             size="small"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
+            {...register("endDate")}
           />
         </Stack>
 
-        {/* Время начала / окончания */}
         <Stack direction="row" spacing={2}>
           <TextField
             fullWidth
             label="Время начала"
             type="time"
             size="small"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
             InputLabelProps={{ shrink: true }}
+            {...register("startTime")}
           />
-
           <TextField
             fullWidth
             label="Время окончания"
             type="time"
             size="small"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
             InputLabelProps={{ shrink: true }}
+            {...register("endTime")}
           />
         </Stack>
       </Stack>

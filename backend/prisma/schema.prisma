@@ -32,7 +32,6 @@ enum EventFormat {
 model Auditorium {
   id       String    @id @default(uuid()) @db.Uuid
   name     String
-  capacity Int?
 
   // обратная связь
   mainBookings     Booking[] @relation("MainAuditorium")

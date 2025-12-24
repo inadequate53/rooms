@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 import {
   Box,
   Paper,
@@ -19,27 +20,38 @@ interface ParticipantsSectionProps {
 export function ParticipantsSection({
   onCompletionChange,
 }: ParticipantsSectionProps) {
-  const [organizerName, setOrganizerName] = useState("");
-  const [organizerPosition, setOrganizerPosition] = useState("");
-  const [expectedCount, setExpectedCount] = useState("");
-  const [participantType, setParticipantType] = useState("");
-  const [groupInput, setGroupInput] = useState("");
-  const [groups, setGroups] = useState<string[]>([]);
+  const { register, watch, setValue, getValues } = useFormContext<any>();
+
+  const organizerName = watch("organizerName");
+  const expectedCount = watch("expectedCount");
+  const groups = watch("groups") as string[];
 
   useEffect(() => {
     const completed =
-      organizerName.trim().length > 0 && expectedCount.trim().length > 0;
+      (organizerName?.trim?.().length ?? 0) > 0 &&
+      (expectedCount?.trim?.().length ?? 0) > 0;
     onCompletionChange?.(completed);
   }, [organizerName, expectedCount, onCompletionChange]);
 
   const handleAddGroup = () => {
-    if (!groupInput.trim()) return;
-    setGroups((prev) => [...prev, groupInput.trim()]);
-    setGroupInput("");
+    const input = (getValues("groupInput") as string)?.trim();
+    if (!input) return;
+
+    const current = (getValues("groups") as string[]) ?? [];
+    setValue("groups", [...current, input], {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue("groupInput", "", { shouldDirty: true });
   };
 
   const handleRemoveGroup = (index: number) => {
-    setGroups((prev) => prev.filter((_, i) => i !== index));
+    const current = (getValues("groups") as string[]) ?? [];
+    setValue(
+      "groups",
+      current.filter((_, i) => i !== index),
+      { shouldDirty: true, shouldValidate: true }
+    );
   };
 
   return (
@@ -54,7 +66,6 @@ export function ParticipantsSection({
         bgcolor: "background.paper",
       }}
     >
-      {/* Заголовок карточки */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
         <Box
           sx={{
@@ -82,14 +93,8 @@ export function ParticipantsSection({
       </Stack>
 
       <Stack spacing={3}>
-        {/* Блок: Организатор мероприятия */}
         <Box>
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            mb={1}
-            sx={{ display: "flex", alignItems: "center", gap: 1 }}
-          >
+          <Typography variant="body2" fontWeight={600} mb={1}>
             Организатор мероприятия
           </Typography>
 
@@ -100,33 +105,24 @@ export function ParticipantsSection({
                 required
                 label="ФИО организатора"
                 size="small"
-                value={organizerName}
-                onChange={(e) => setOrganizerName(e.target.value)}
+                {...register("organizerName")}
               />
               <TextField
                 fullWidth
                 label="Должность"
                 size="small"
-                value={organizerPosition}
-                onChange={(e) => setOrganizerPosition(e.target.value)}
+                {...register("organizerPosition")}
               />
             </Stack>
           </Stack>
         </Box>
 
-        {/* Блок: Информация об участниках */}
         <Box>
-          <Typography
-            variant="body2"
-            fontWeight={600}
-            mb={1}
-            sx={{ display: "flex", alignItems: "center", gap: 1 }}
-          >
+          <Typography variant="body2" fontWeight={600} mb={1}>
             Информация об участниках
           </Typography>
 
           <Stack spacing={2}>
-            {/* Ожидаемое количество + тип участников */}
             <Stack direction="row" spacing={2}>
               <TextField
                 fullWidth
@@ -134,17 +130,18 @@ export function ParticipantsSection({
                 label="Ожидаемое количество участников"
                 size="small"
                 type="number"
-                value={expectedCount}
-                onChange={(e) => setExpectedCount(e.target.value)}
+                {...register("expectedCount")}
               />
+
               <TextField
                 fullWidth
                 label="Тип участников"
                 size="small"
                 select
-                value={participantType}
-                onChange={(e) => setParticipantType(e.target.value)}
+                defaultValue=""
+                {...register("participantType")}
               >
+                <MenuItem value="">—</MenuItem>
                 <MenuItem value="students">Студенты</MenuItem>
                 <MenuItem value="teachers">Преподаватели</MenuItem>
                 <MenuItem value="guests">Гости</MenuItem>
@@ -152,15 +149,13 @@ export function ParticipantsSection({
               </TextField>
             </Stack>
 
-            {/* Группы/аудитории + кнопка добавления */}
             <Stack direction="row" spacing={2}>
               <TextField
                 fullWidth
                 label="Группы / аудитории"
                 placeholder="Например: М-101, И-201"
                 size="small"
-                value={groupInput}
-                onChange={(e) => setGroupInput(e.target.value)}
+                {...register("groupInput")}
               />
               <IconButton
                 onClick={handleAddGroup}
@@ -178,8 +173,7 @@ export function ParticipantsSection({
               </IconButton>
             </Stack>
 
-            {/* Список добавленных групп */}
-            {groups.length > 0 && (
+            {groups?.length > 0 && (
               <Box
                 sx={{
                   mt: 1,
@@ -190,7 +184,7 @@ export function ParticipantsSection({
               >
                 {groups.map((group, index) => (
                   <Stack
-                    key={index}
+                    key={`${group}-${index}`}
                     direction="row"
                     alignItems="center"
                     justifyContent="space-between"

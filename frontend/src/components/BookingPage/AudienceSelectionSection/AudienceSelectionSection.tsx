@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useFormContext, Controller } from "react-hook-form";
 import {
   Box,
   Paper,
@@ -8,35 +9,29 @@ import {
   MenuItem,
 } from "@mui/material";
 import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
+import type { AuditoriumDto } from "@/api/auditoriumsApi";
 
 interface AudienceSelectionSectionProps {
   onCompletionChange?: (completed: boolean) => void;
+  auditoriums: AuditoriumDto[];
 }
 
 export function AudienceSelectionSection({
   onCompletionChange,
+  auditoriums,
 }: AudienceSelectionSectionProps) {
-  const [mainAudience, setMainAudience] = useState("");
-  const [reserveAudience, setReserveAudience] = useState("");
+  const { control, watch } = useFormContext<any>();
+  const mainAuditoriumId = watch("mainAuditoriumId");
 
   useEffect(() => {
-    const completed = mainAudience !== "";
-    onCompletionChange?.(completed);
-  }, [mainAudience, onCompletionChange]);
+    onCompletionChange?.(!!mainAuditoriumId);
+  }, [mainAuditoriumId, onCompletionChange]);
 
   return (
     <Paper
       elevation={0}
-      sx={{
-        p: 3,
-        borderRadius: 3,
-        border: "1px solid",
-        boxShadow: 1,
-        borderColor: "rgba(230, 232, 236, 1)",
-        bgcolor: "background.paper",
-      }}
+      sx={{ p: 3, borderRadius: 3, border: "1px solid", boxShadow: 1 }}
     >
-      {/* Заголовок карточки */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
         <Box
           sx={{
@@ -54,48 +49,61 @@ export function AudienceSelectionSection({
         </Box>
 
         <Box>
-          <Typography variant="subtitle1" fontWeight={600} align="left">
+          <Typography variant="subtitle1" fontWeight={600}>
             Выбор аудитории
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="left">
-            Выберите подходящую аудиторию с учётом вместимости и оборудования
+          <Typography variant="body2" color="text.secondary">
+            Выберите подходящую аудиторию
           </Typography>
         </Box>
       </Stack>
 
-      {/* Поля выбора аудитории */}
       <Stack spacing={2}>
         <Stack direction="row" spacing={2}>
-          <TextField
-            fullWidth
-            required
-            label="Основная аудитория"
-            select
-            size="small"
-            value={mainAudience}
-            onChange={(e) => setMainAudience(e.target.value)}
-            placeholder="Выберите аудиторию"
-            helperText="Аудитория, где планируется проведение мероприятия"
-          >
-            <MenuItem value="101">Аудитория 101</MenuItem>
-            <MenuItem value="202">Аудитория 202</MenuItem>
-            <MenuItem value="305">Аудитория 305</MenuItem>
-          </TextField>
+          <Controller
+            name="mainAuditoriumId"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                required
+                select
+                size="small"
+                label="Основная аудитория"
+                helperText="Аудитория, где планируется мероприятие"
+              >
+                <MenuItem value="">—</MenuItem>
+                {auditoriums.map((a) => (
+                  <MenuItem key={a.id} value={a.id}>
+                    {a.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
 
-          <TextField
-            fullWidth
-            label="Резервная аудитория"
-            select
-            size="small"
-            value={reserveAudience}
-            onChange={(e) => setReserveAudience(e.target.value)}
-            helperText="На случай недоступности основной аудитории"
-          >
-            <MenuItem value="">Не требуется</MenuItem>
-            <MenuItem value="102">Аудитория 102</MenuItem>
-            <MenuItem value="204">Аудитория 204</MenuItem>
-            <MenuItem value="306">Аудитория 306</MenuItem>
-          </TextField>
+          <Controller
+            name="reserveAuditoriumId"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                select
+                size="small"
+                label="Резервная аудитория"
+                helperText="На случай недоступности основной"
+              >
+                <MenuItem value="">—</MenuItem>
+                {auditoriums.map((a) => (
+                  <MenuItem key={a.id} value={a.id}>
+                    {a.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          />
         </Stack>
       </Stack>
     </Paper>

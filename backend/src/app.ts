@@ -7,7 +7,7 @@ import { STATUS_CODES } from "node:http";
 import prismaPlugin from "./plugins/prisma.js";
 import { Type as T } from "typebox";
 import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import { ValidationProblem, ProblemDetails, User, Health } from "./types.js";
+import { ValidationProblem, ProblemDetails, User, Health, AuditoriumCreateBody } from "./types.js";
 import { BookingCreateBody, BookingDto } from "./types.js";
 import { BookingListItemDto } from "./types.js";
 
@@ -175,7 +175,6 @@ export async function buildApp() {
   const AuditoriumDto = T.Object({
     id: T.String(),
     name: T.String(),
-    capacity: T.Union([T.Integer(), T.Null()]), // <-- ключевая правка
   });
 
   app.get(
@@ -192,11 +191,36 @@ export async function buildApp() {
     },
     async () => {
       return app.prisma.auditorium.findMany({
-        select: { id: true, name: true, capacity: true },
+        select: { id: true, name: true },
       });
     }
   );
-
+  // POST /api/auditoriums — создать аудиторию
+  app.post(
+    "/api/auditoriums",
+    {
+      schema: {
+        tags: ["System"],
+        summary: "Создать аудиторию",
+        body: AuditoriumCreateBody,
+        response: {
+          201: AuditoriumDto,
+          500: ProblemDetails,
+        },
+      },
+    },
+    async (req, reply) => {
+      const b = req.body;
+      const created = await app.prisma.auditorium.create({
+        data: {
+          name: b.name,
+        },
+      });
+      reply.code(201).send({
+        ...created,
+      });
+    }
+  );
 
   // POST /api/bookings — создать бронирование
   app.post(
@@ -364,6 +388,231 @@ export async function buildApp() {
     }
   );
 
+  // GET /api/bookings/:id — получить бронирование по id
+  app.get(
+    "/api/bookings/:id",
+    {
+      schema: {
+        operationId: "getBookingById",
+        tags: ["Bookings"],
+        summary: "Получить бронирование по id",
+        params: T.Object({ id: T.String() }),
+        response: {
+          200: { content: { "application/json": { schema: BookingDto } } },
+          404: {
+            description: "Not Found",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+          500: {
+            description: "Internal Server Error",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+
+      const b = await app.prisma.booking.findUnique({
+        where: { id },
+        include: {
+          mainAuditorium: { select: { name: true } },
+          reserveAuditorium: { select: { name: true } },
+        },
+      });
+
+      if (!b) {
+        reply
+          .code(404)
+          .type("application/problem+json")
+          .send({
+            type: "about:blank",
+            title: "Not Found",
+            status: 404,
+            detail: `Booking ${id} not found`,
+            instance: req.url,
+          } satisfies ProblemDetails);
+        return;
+      }
+
+      // Важно: приводим даты к ISO, и имена аудиторий — из include
+      return {
+        id: b.id,
+        title: b.title,
+        eventType: b.eventType,
+        subject: b.subject ?? null,
+        format: b.format as any,
+        description: b.description ?? null,
+
+        startsAt: b.startsAt.toISOString(),
+        endsAt: b.endsAt.toISOString(),
+
+        mainAuditoriumId: b.mainAuditoriumId,
+        mainAuditoriumName: b.mainAuditorium.name,
+
+        reserveAuditoriumId: b.reserveAuditoriumId ?? null,
+        reserveAuditoriumName: b.reserveAuditorium?.name ?? null,
+
+        organizerName: b.organizerName,
+        organizerPosition: b.organizerPosition ?? null,
+
+        expectedCount: b.expectedCount ?? null,
+        participantType: b.participantType ?? null,
+
+        groups: b.groups ?? [],
+        createdAt: b.createdAt.toISOString(),
+      };
+    }
+  );
+
+  // DELETE /api/bookings/:id — удалить бронирование
+  app.delete(
+    "/api/bookings/:id",
+    {
+      schema: {
+        operationId: "deleteBooking",
+        tags: ["Bookings"],
+        summary: "Удалить бронирование по id",
+        params: T.Object({ id: T.String() }),
+        response: {
+          204: { description: "Deleted (No Content)" },
+          404: {
+            description: "Not Found",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+          500: {
+            description: "Internal Server Error",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+
+      // Проверим существование, чтобы вернуть 404 (а не prisma error)
+      const existing = await app.prisma.booking.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        reply
+          .code(404)
+          .type("application/problem+json")
+          .send({
+            type: "about:blank",
+            title: "Not Found",
+            status: 404,
+            detail: `Booking ${id} not found`,
+            instance: req.url,
+          } satisfies ProblemDetails);
+        return;
+      }
+
+      await app.prisma.booking.delete({ where: { id } });
+
+      // 204 без тела
+      reply.code(204).send();
+    }
+  );
+
+  app.put(
+    "/api/bookings/:id",
+    {
+      schema: {
+        operationId: "updateBooking",
+        tags: ["Bookings"],
+        summary: "Обновить бронирование",
+        params: T.Object({ id: T.String() }),
+        body: BookingCreateBody,
+        response: {
+          200: {
+            description: "Updated booking",
+            content: { "application/json": { schema: T.Any() } },
+          },
+          404: {
+            description: "Not Found",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+          400: {
+            description: "Validation error",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+          500: {
+            description: "Internal Server Error",
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const body = req.body as any;
+
+      // проверим, существует ли запись (чтобы отдавать 404, а не Prisma error)
+      const existing = await app.prisma.booking.findUnique({ where: { id } });
+      if (!existing) {
+        reply
+          .code(404)
+          .type("application/problem+json")
+          .send({
+            type: "about:blank",
+            title: "Not Found",
+            status: 404,
+            detail: `Booking ${id} not found`,
+            instance: req.url,
+          } satisfies ProblemDetails);
+        return;
+      }
+
+      const updated = await app.prisma.booking.update({
+        where: { id },
+        data: {
+          title: body.title,
+          eventType: body.eventType,
+          subject: body.subject ?? null,
+          format: body.format,
+          description: body.description ?? null,
+          startsAt: new Date(body.startsAt),
+          endsAt: new Date(body.endsAt),
+          mainAuditoriumId: body.mainAuditoriumId,
+          reserveAuditoriumId: body.reserveAuditoriumId ?? null,
+          organizerName: body.organizerName,
+          organizerPosition: body.organizerPosition ?? null,
+          expectedCount: body.expectedCount ?? null,
+          participantType: body.participantType ?? null,
+          groups: body.groups,
+        },
+        include: {
+          mainAuditorium: true,
+          reserveAuditorium: true,
+        },
+      });
+
+      return {
+        id: updated.id,
+        title: updated.title,
+        eventType: updated.eventType,
+        subject: updated.subject,
+        format: updated.format,
+        description: updated.description,
+        startsAt: updated.startsAt.toISOString(),
+        endsAt: updated.endsAt.toISOString(),
+        mainAuditoriumId: updated.mainAuditoriumId,
+        mainAuditoriumName: updated.mainAuditorium?.name ?? "",
+        reserveAuditoriumId: updated.reserveAuditoriumId,
+        reserveAuditoriumName: updated.reserveAuditorium?.name ?? null,
+        organizerName: updated.organizerName,
+        organizerPosition: updated.organizerPosition,
+        expectedCount: updated.expectedCount,
+        participantType: updated.participantType,
+        groups: updated.groups,
+        createdAt: updated.createdAt.toISOString(),
+      };
+    }
+  );
+
   /**
    * GET /api/health — health-check для мониторинга.
    * Пытаемся сделать минимальный запрос в БД. Если БД недоступна, возвращаем 503.
@@ -429,7 +678,7 @@ export async function buildApp() {
     async (_req, reply) => {
       reply.type("application/json").send(app.swagger());
     }
-    );
+  );
 
   return app;
 }

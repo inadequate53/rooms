@@ -4,15 +4,21 @@ import { PageHeader } from "@/components/common/PageHeader";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import AddIcon from "@mui/icons-material/Add";
-import { AuditoriumTable } from "@/components/DataGridCatalog";
+import { BookingTable } from "@/components/DataGridCatalog";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentChanges } from "@/components/RecentChanges";
 import { Equipment } from "@/components/Equipment";
 import { Footer } from "@/components/common/Footer";
-import { BuildingScheme } from "@/components/BuildingScheme";
 
+type CatalogPageProps = {
+  onCreateBooking: () => void;
+  onEditBooking: (id: string) => void;
+};
 
-export default function CatalogPage() {
+export default function CatalogPage({
+  onCreateBooking,
+  onEditBooking,
+}: CatalogPageProps) {
   return (
     <Container
       maxWidth={false}
@@ -70,10 +76,7 @@ export default function CatalogPage() {
                 variant="contained"
                 startIcon={<AddIcon />}
                 size="small"
-                sx={{
-                  borderRadius: 2,
-                  textTransform: "none",
-                }}
+                sx={{ borderRadius: 2, textTransform: "none" }}
               >
                 Добавить аудиторию
               </Button>
@@ -81,7 +84,7 @@ export default function CatalogPage() {
           }
         />
 
-          <DashboardStats />
+        <DashboardStats />
 
         <Box
           sx={{
@@ -97,24 +100,20 @@ export default function CatalogPage() {
             color="textPrimary"
             sx={{ mb: 2, textAlign: "center" }}
           >
-            Список аудиторий
+            Список бронирований
           </Typography>
 
-          <AuditoriumTable/>
+          <BookingTable onEdit={onEditBooking} />
         </Box>
 
         <QuickActions
           onAddAuditorium={() => console.log("Добавить аудиторию")}
-          onCreateBooking={() => console.log("Создать бронирование")}
+          onCreateBooking={onCreateBooking} // ✅ теперь создаём бронь реально
           onEditAuditorium={() => console.log("Массовое редактирование")}
         />
 
         <RecentChanges />
-
         <Equipment />
-
-        {/*<BuildingScheme />*/}
-
         <Footer />
       </Box>
     </Container>

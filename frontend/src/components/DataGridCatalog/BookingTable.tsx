@@ -1,3 +1,4 @@
+// src/components/DataGridCatalog.tsx (или где у тебя лежит BookingTable)
 import { useEffect, useMemo, useState } from "react";
 import { Box, Chip, CircularProgress, Typography } from "@mui/material";
 import {
@@ -7,7 +8,11 @@ import {
 } from "@mui/x-data-grid";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { fetchBookings, type BookingDto } from "@/api/bookingsApi";
+import { deleteBooking, fetchBookings, type BookingDto } from "@/api/bookingsApi";
+
+type BookingTableProps = {
+  onEdit: (id: string) => void;
+};
 
 function formatFormat(v: BookingDto["format"]) {
   switch (v) {
@@ -30,7 +35,7 @@ function toLocalDateTime(iso: string) {
   return d.toLocaleString();
 }
 
-export function BookingTable() {
+export function BookingTable({ onEdit }: BookingTableProps) {
   const [rows, setRows] = useState<BookingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +60,22 @@ export function BookingTable() {
   }, []);
 
   const handleEdit = (id: string) => {
-    console.log("Редактировать бронирование", id);
+    onEdit(id);
   };
 
-  const handleDelete = (id: string) => {
-    // пока локально убираем из таблицы (реальный DELETE сделаем позже)
-    setRows((prev) => prev.filter((r) => r.id !== id));
+  const handleDelete = async (id: string) => {
+    // оптимистично убираем строку
+    const prev = rows;
+    setRows((r) => r.filter((x) => x.id !== id));
+    setError(null);
+
+    try {
+      await deleteBooking(id);
+    } catch (e) {
+      // откатываем
+      setRows(prev);
+      setError((e as Error).message || "Ошибка удаления");
+    }
   };
 
   const columns: GridColDef<BookingDto>[] = useMemo(
@@ -167,7 +182,7 @@ export function BookingTable() {
         ],
       },
     ],
-    []
+    [onEdit]
   );
 
   if (loading) {

@@ -5,25 +5,59 @@ import CatalogPage from "./pages/CatalogPage";
 import BookingPage from "./pages/BookingPage";
 import SettingPage from "./pages/SettingsPage";
 
+type ActivePage = "catalog" | "bookings" | "settings";
+
 function App() {
-  const [active, setActive] = useState("catalog");
+  const [active, setActive] = useState<ActivePage>("catalog");
+  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+
+  const openCreateBooking = () => {
+    setEditingBookingId(null);
+    setActive("bookings");
+  };
+
+  const openEditBooking = (id: string) => {
+    setEditingBookingId(id);
+    setActive("bookings");
+  };
+
+  const handleNavigate = (next: string) => {
+    const page = next as ActivePage;
+    setActive(page);
+    // если ушли с формы — сбрасываем режим редактирования
+    if (page !== "bookings") setEditingBookingId(null);
+  };
 
   return (
     <>
-      {/* Передаем в шапку базовые параметры для её настройки*/}
       <Header
         activeNavId={active}
-        onNavigate={setActive}
+        onNavigate={handleNavigate}
         onBellClick={() => console.log("bell")}
       />
-      <main>
-        {active === "catalog" && <CatalogPage />}
-        {active === "bookings" && <BookingPage />}
-        {active == "settings" && <SettingPage />}
-        {/* bookings, settings */}
 
+      <main>
+        {active === "catalog" && (
+          <CatalogPage
+            onCreateBooking={openCreateBooking}
+            onEditBooking={openEditBooking}
+          />
+        )}
+
+        {active === "bookings" && (
+          <BookingPage
+            bookingId={editingBookingId}
+            onDone={() => {
+              setEditingBookingId(null);
+              setActive("catalog");
+            }}
+          />
+        )}
+
+        {active === "settings" && <SettingPage />}
       </main>
     </>
   );
 }
+
 export default App;

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useFormContext } from "react-hook-form";
 import {
   Box,
   Paper,
@@ -14,14 +15,14 @@ interface MainInfoSectionProps {
 }
 
 export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
-  const [eventName, setEventName] = useState("");
-  const [eventType, setEventType] = useState("");
-  const [format, setFormat] = useState("offline");
+  const { register, watch } = useFormContext<any>();
+  const title = watch("title");
+  const eventType = watch("eventType");
 
   useEffect(() => {
-    const completed = eventName.trim().length > 0 && eventType !== "";
+    const completed = (title?.trim?.().length ?? 0) > 0 && !!eventType;
     onCompletionChange?.(completed);
-  }, [eventName, eventType, onCompletionChange]);
+  }, [title, eventType, onCompletionChange]);
 
   return (
     <Paper
@@ -35,7 +36,6 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
         bgcolor: "background.paper",
       }}
     >
-      {/* Заголовок */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
         <Box
           sx={{
@@ -51,7 +51,6 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
         >
           <EventNoteIcon fontSize="small" />
         </Box>
-
         <Box>
           <Typography variant="subtitle1" fontWeight={600} align="left">
             Основная информация о мероприятии
@@ -62,9 +61,7 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
         </Box>
       </Stack>
 
-      {/* Форма — 2 фиксированные колонки */}
       <Stack spacing={2}>
-        {/* Первая строка */}
         <Stack direction="row" spacing={2}>
           <TextField
             fullWidth
@@ -72,8 +69,7 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
             label="Название мероприятия"
             size="small"
             helperText="Например: Лекция по высшей математике"
-            value={eventName}
-            onChange={(e) => setEventName(e.target.value)}
+            {...register("title")}
           />
 
           <TextField
@@ -82,8 +78,8 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
             label="Тип мероприятия"
             size="small"
             select
-            value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
+            defaultValue="lecture"
+            {...register("eventType")}
           >
             <MenuItem value="lecture">Лекция</MenuItem>
             <MenuItem value="seminar">Семинар</MenuItem>
@@ -92,7 +88,6 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
           </TextField>
         </Stack>
 
-        {/* Вторая строка */}
         <Stack direction="row" spacing={2}>
           <TextField
             fullWidth
@@ -100,6 +95,7 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
             placeholder="Например: Высшая математика"
             size="small"
             helperText="Название учебной дисциплины или предмета"
+            {...register("subject")}
           />
 
           <TextField
@@ -107,8 +103,8 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
             label="Формат проведения"
             size="small"
             select
-            value={format}
-            onChange={(e) => setFormat(e.target.value)}
+            defaultValue="offline"
+            {...register("format")}
           >
             <MenuItem value="offline">Очно</MenuItem>
             <MenuItem value="online">Дистанционно</MenuItem>
@@ -116,7 +112,6 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
           </TextField>
         </Stack>
 
-        {/* Описание — на всю ширину */}
         <TextField
           fullWidth
           label="Описание мероприятия"
@@ -124,6 +119,7 @@ export function MainInfoSection({ onCompletionChange }: MainInfoSectionProps) {
           minRows={4}
           placeholder="Подробное описание мероприятия, цели, особенности проведения..."
           helperText="Дополнительная информация о содержании и целях мероприятия"
+          {...register("description")}
         />
       </Stack>
     </Paper>

@@ -1,6 +1,22 @@
 import { Paper, Stack, Button } from "@mui/material";
 
-export function BookingActions() {
+type BookingActionsProps = {
+  onCreate: () => void;
+  onPreview?: () => void;
+  onDraft?: () => void;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+  isEdit?: boolean;
+};
+
+export function BookingActions({
+  onCreate,
+  onPreview,
+  onDraft,
+  onCancel,
+  isSubmitting,
+  isEdit
+}: BookingActionsProps) {
   return (
     <Paper
       elevation={0}
@@ -16,6 +32,8 @@ export function BookingActions() {
         <Button
           variant="contained"
           fullWidth
+          disabled={isSubmitting}
+          onClick={onCreate}
           sx={{
             textTransform: "none",
             fontWeight: 600,
@@ -23,12 +41,13 @@ export function BookingActions() {
             py: 1.2,
           }}
         >
-          Создать бронирование
+          {isEdit ? "Редактировать бронирование" : "Создать бронирование"}
         </Button>
 
         <Button
           variant="outlined"
           fullWidth
+          onClick={onPreview}
           sx={{
             textTransform: "none",
             fontWeight: 500,
@@ -42,6 +61,8 @@ export function BookingActions() {
         <Button
           variant="text"
           fullWidth
+          disabled={isSubmitting}
+          onClick={onDraft}
           sx={{
             textTransform: "none",
             fontWeight: 500,
@@ -55,6 +76,7 @@ export function BookingActions() {
         <Button
           variant="text"
           fullWidth
+          onClick={onCancel}
           sx={{
             textTransform: "none",
             fontWeight: 400,
