@@ -1,4 +1,5 @@
-// src/api/auditoriumsApi.ts
+import { API_BASE } from "./apiBase";
+
 export type AuditoriumDto = {
   id: string;
   name: string;
@@ -14,5 +15,5 @@ async function apiGet<T>(url: string): Promise<T> {
 }
 
 export async function fetchAuditoriums(): Promise<AuditoriumDto[]> {
-  return apiGet<AuditoriumDto[]>("/api/auditoriums");
+  return apiGet(`${API_BASE}/api/auditoriums`);
 }

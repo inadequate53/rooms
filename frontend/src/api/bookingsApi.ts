@@ -1,6 +1,6 @@
-const API_BASE = "https://rooms-sdu2.onrender.com";
+import { API_BASE } from "./apiBase";
 
-// src/api/bookingsApi.ts
+// ===== types =====
 export type BookingDto = {
   id: string;
   title: string;
@@ -9,8 +9,8 @@ export type BookingDto = {
   format: "ONSITE" | "ONLINE" | "LABS" | "OTHER";
   description: string | null;
 
-  startsAt: string; // ISO
-  endsAt: string; // ISO
+  startsAt: string;
+  endsAt: string;
 
   mainAuditoriumId: string;
   mainAuditoriumName: string;
@@ -25,7 +25,7 @@ export type BookingDto = {
   participantType: string | null;
 
   groups: string[];
-  createdAt: string; // ISO
+  createdAt: string;
 };
 
 export type BookingCreateBody = {
@@ -35,8 +35,8 @@ export type BookingCreateBody = {
   format: "ONSITE" | "ONLINE" | "HYBRID";
   description?: string | null;
 
-  startsAt: string; // ISO
-  endsAt: string; // ISO
+  startsAt: string;
+  endsAt: string;
 
   mainAuditoriumId: string;
   reserveAuditoriumId?: string | null;
@@ -50,6 +50,7 @@ export type BookingCreateBody = {
   groups: string[];
 };
 
+// ===== helpers =====
 async function apiGet<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
@@ -72,16 +73,6 @@ async function apiPost<T>(url: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function fetchBookings(): Promise<BookingDto[]> {
-  return apiGet<BookingDto[]>("/api/bookings");
-}
-
-export async function createBooking(
-  body: BookingCreateBody
-): Promise<BookingDto> {
-  return apiPost<BookingDto>("/api/bookings", body);
-}
-
 async function apiPut<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "PUT",
@@ -95,19 +86,6 @@ async function apiPut<T>(url: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function updateBooking(
-  id: string,
-  body: BookingCreateBody
-): Promise<BookingDto> {
-  return apiPut<BookingDto>(`/api/bookings/${id}`, body);
-}
-
-export async function fetchBooking(id: string): Promise<BookingDto> {
-  return apiGet<BookingDto>(`/api/bookings/${id}`);
-}
-
-// src/api/bookingsApi.ts — добавь в конец файла
-
 async function apiDelete(url: string): Promise<void> {
   const res = await fetch(url, {
     method: "DELETE",
@@ -119,7 +97,28 @@ async function apiDelete(url: string): Promise<void> {
   }
 }
 
-export async function deleteBooking(id: string): Promise<void> {
-  await apiDelete(`/api/bookings/${id}`);
+// ===== API =====
+export async function fetchBookings(): Promise<BookingDto[]> {
+  return apiGet(`${API_BASE}/api/bookings`);
 }
 
+export async function fetchBooking(id: string): Promise<BookingDto> {
+  return apiGet(`${API_BASE}/api/bookings/${id}`);
+}
+
+export async function createBooking(
+  body: BookingCreateBody
+): Promise<BookingDto> {
+  return apiPost(`${API_BASE}/api/bookings`, body);
+}
+
+export async function updateBooking(
+  id: string,
+  body: BookingCreateBody
+): Promise<BookingDto> {
+  return apiPut(`${API_BASE}/api/bookings/${id}`, body);
+}
+
+export async function deleteBooking(id: string): Promise<void> {
+  return apiDelete(`${API_BASE}/api/bookings/${id}`);
+}
