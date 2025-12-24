@@ -35,6 +35,16 @@ export class ValidationProblem extends Error implements FastifyError {
   }
 }
 
+const NullableString = T.Union([T.String(), T.Null()]);
+const NullableInt = T.Union([T.Integer(), T.Null()]);
+
+export const EventFormat = T.Union([
+  T.Literal('ONSITE'),
+  T.Literal('ONLINE'),
+  T.Literal('LABS'),
+  T.Literal('OTHER'),
+]);
+
 // Схема ответа в формате RFC 7807 (Problem Details) — единый JSON-формат для сообщений об ошибках.
 export const ProblemDetails = T.Object(
   {
@@ -96,3 +106,97 @@ export const Health = T.Object({
   }),
 });
 export type Health = Static<typeof Health>;
+
+export const BookingCreateBody = T.Object({
+  title: T.String({
+     description: "Название брони",
+     minLength: 1, 
+  }),
+  eventType: T.String({
+    description: "Тип мероприятия",
+    minLength: 1,
+  }),
+  subject: T.Optional(T.String()),
+  format: EventFormat,
+  description: T.Optional(T.String()),
+
+  startsAt: T.String({
+    format: "date-time"
+  }),
+  endsAt: T.String({
+    format: "date-time"
+  }),
+
+  mainAuditoriumId: T.String({
+    minLength: 1,
+    description: "ID основного аудитория"
+  }),
+  reserveAuditoriumId: T.Optional(T.String({
+    description: "ID резервного аудитория"
+  })),
+  
+  organizerName: T.String({
+    description: "Имя организатора",
+    minLength: 1,
+  }),
+  organizerPosition: T.Optional(T.String()),
+  expectedCount: T.Optional(T.Integer({
+    minimum: 0,
+    description: "Ожидаемое количество участников"
+  })),
+  participantType: T.Optional(T.String({
+    description: "Тип участников мероприятия"
+  })),
+  groups: T.Optional(T.Array(T.String())),
+});
+
+export type BookingCreateBody = Static<typeof BookingCreateBody>;
+
+export const BookingDto = T.Object({
+  id: T.String(),
+  title: T.String(),
+  eventType: T.String(),
+  subject: NullableString,
+  format: EventFormat,
+  description: NullableString,
+  startsAt: T.String({ format: "date-time" }),
+  endsAt: T.String({ format: "date-time" }),
+  mainAuditoriumId: T.String(),
+  reserveAuditoriumId: NullableString,
+  organizerName: T.String(),
+  organizerPosition: NullableString,
+  expectedCount: NullableInt,
+  participantType: NullableString,
+  groups: T.Array(T.String()),
+  createdAt: T.String({ format: "date-time" }),
+});
+
+export type BookingDto = Static<typeof BookingDto>;
+
+export const BookingListItemDto = T.Object({
+  id: T.String(),
+  title: T.String(),
+  eventType: T.String(),
+  subject: NullableString,
+  format: EventFormat,
+  description: NullableString,
+
+  startsAt: T.String({ format: "date-time" }),
+  endsAt: T.String({ format: "date-time" }),
+
+  mainAuditoriumId: T.String(),
+  mainAuditoriumName: T.String(), // 👈 добавили
+
+  reserveAuditoriumId: NullableString,
+  reserveAuditoriumName: NullableString, // 👈 добавили
+
+  organizerName: T.String(),
+  organizerPosition: NullableString,
+  expectedCount: T.Union([T.Integer(), T.Null()]),
+  participantType: NullableString,
+
+  groups: T.Array(T.String()),
+  createdAt: T.String({ format: "date-time" }),
+});
+export type BookingListItemDto = Static<typeof BookingListItemDto>;
+

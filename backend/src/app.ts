@@ -8,6 +8,8 @@ import prismaPlugin from "./plugins/prisma.js";
 import { Type as T } from "typebox";
 import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import { ValidationProblem, ProblemDetails, User, Health } from "./types.js";
+import { BookingCreateBody, BookingDto } from "./types.js";
+import { BookingListItemDto } from "./types.js";
 
 // Этот модуль собирает все настройки Fastify: плагины инфраструктуры, обработчики ошибок и маршруты API.
 
@@ -170,6 +172,198 @@ export async function buildApp() {
     }
   );
 
+  const AuditoriumDto = T.Object({
+    id: T.String(),
+    name: T.String(),
+    capacity: T.Union([T.Integer(), T.Null()]), // <-- ключевая правка
+  });
+
+  app.get(
+    "/api/auditoriums",
+    {
+      schema: {
+        tags: ["System"],
+        summary: "Список аудиторий",
+        response: {
+          200: T.Array(AuditoriumDto),
+          500: ProblemDetails,
+        },
+      },
+    },
+    async () => {
+      return app.prisma.auditorium.findMany({
+        select: { id: true, name: true, capacity: true },
+      });
+    }
+  );
+
+
+  // POST /api/bookings — создать бронирование
+  app.post(
+    "/api/bookings",
+    {
+      schema: {
+        tags: ["System"],
+        summary: "Создать бронирование",
+        body: BookingCreateBody,
+        response: {
+          201: { content: { "application/json": { schema: BookingDto } } },
+          400: {
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+          409: {
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+          500: {
+            content: { "application/problem+json": { schema: ProblemDetails } },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const b = req.body;
+
+      const startsAt = new Date(b.startsAt);
+      const endsAt = new Date(b.endsAt);
+      if (
+        !(startsAt instanceof Date) ||
+        isNaN(startsAt.getTime()) ||
+        !(endsAt instanceof Date) ||
+        isNaN(endsAt.getTime())
+      ) {
+        reply
+          .code(400)
+          .type("application/problem+json")
+          .send({
+            type: "about:blank",
+            title: "Bad Request",
+            status: 400,
+            detail: "Invalid startsAt/endsAt",
+            instance: req.url,
+          } satisfies ProblemDetails);
+        return;
+      }
+      if (endsAt <= startsAt) {
+        reply
+          .code(400)
+          .type("application/problem+json")
+          .send({
+            type: "about:blank",
+            title: "Bad Request",
+            status: 400,
+            detail: "endsAt must be greater than startsAt",
+            instance: req.url,
+          } satisfies ProblemDetails);
+        return;
+      }
+
+      // Простая защита от пересечений по основной аудитории:
+      const overlap = await app.prisma.booking.findFirst({
+        where: {
+          mainAuditoriumId: b.mainAuditoriumId,
+          AND: [
+            { startsAt: { lt: endsAt } }, // existing starts before new ends
+            { endsAt: { gt: startsAt } }, // existing ends after new starts
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (overlap) {
+        reply
+          .code(409)
+          .type("application/problem+json")
+          .send({
+            type: "https://example.com/problems/conflict",
+            title: "Conflict",
+            status: 409,
+            detail: "Time slot is already booked for the selected auditorium",
+            instance: req.url,
+          } satisfies ProblemDetails);
+        return;
+      }
+
+      const created = await app.prisma.booking.create({
+        data: {
+          title: b.title,
+          eventType: b.eventType,
+          subject: b.subject ?? null,
+          format: b.format as any,
+          description: b.description ?? null,
+
+          startsAt,
+          endsAt,
+
+          mainAuditoriumId: b.mainAuditoriumId,
+          reserveAuditoriumId: b.reserveAuditoriumId ?? null,
+
+          organizerName: b.organizerName,
+          organizerPosition: b.organizerPosition ?? null,
+          expectedCount: b.expectedCount ?? null,
+          participantType: b.participantType ?? null,
+          groups: b.groups ?? [],
+        },
+      });
+
+      reply.code(201).send({
+        ...created,
+        startsAt: created.startsAt.toISOString(),
+        endsAt: created.endsAt.toISOString(),
+        createdAt: created.createdAt.toISOString(),
+      });
+    }
+  );
+
+  // GET /api/bookings — список бронирований (для таблицы)
+  app.get(
+    "/api/bookings",
+    {
+      schema: {
+        tags: ["System"],
+        summary: "Список бронирований",
+        response: {
+          200: T.Array(BookingListItemDto),
+          500: ProblemDetails,
+        },
+      },
+    },
+    async () => {
+      const items = await app.prisma.booking.findMany({
+        orderBy: { startsAt: "desc" },
+        include: {
+          mainAuditorium: { select: { name: true } },
+          reserveAuditorium: { select: { name: true } },
+        },
+      });
+
+      return items.map((x) => ({
+        id: x.id,
+        title: x.title,
+        eventType: x.eventType,
+        subject: x.subject ?? null,
+        format: x.format as any,
+        description: x.description ?? null,
+
+        startsAt: x.startsAt.toISOString(),
+        endsAt: x.endsAt.toISOString(),
+
+        mainAuditoriumId: x.mainAuditoriumId,
+        mainAuditoriumName: x.mainAuditorium.name,
+
+        reserveAuditoriumId: x.reserveAuditoriumId ?? null,
+        reserveAuditoriumName: x.reserveAuditorium?.name ?? null,
+
+        organizerName: x.organizerName,
+        organizerPosition: x.organizerPosition ?? null,
+        expectedCount: x.expectedCount ?? null,
+        participantType: x.participantType ?? null,
+
+        groups: x.groups ?? [],
+        createdAt: x.createdAt.toISOString(),
+      }));
+    }
+  );
+
   /**
    * GET /api/health — health-check для мониторинга.
    * Пытаемся сделать минимальный запрос в БД. Если БД недоступна, возвращаем 503.
@@ -235,9 +429,7 @@ export async function buildApp() {
     async (_req, reply) => {
       reply.type("application/json").send(app.swagger());
     }
-  );
-  
-  
+    );
 
   return app;
 }

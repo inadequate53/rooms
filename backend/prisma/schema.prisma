@@ -21,3 +21,53 @@ model User {
   name      String?
   createdAt DateTime @default(now())
 }
+
+enum EventFormat {
+  ONSITE   // Очно
+  ONLINE   // Онлайн
+  LABS   // Лабораторная работа
+  OTHER   // Другое
+}
+
+model Auditorium {
+  id       String    @id @default(uuid()) @db.Uuid
+  name     String
+  capacity Int?
+
+  // обратная связь
+  mainBookings     Booking[] @relation("MainAuditorium")
+  reserveBookings  Booking[] @relation("ReserveAuditorium")
+}
+
+model Booking {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Основная информация о мероприятии
+  title       String            // Название мероприятия*
+  eventType   String            // Тип мероприятия* (оставим String — проще)
+  subject     String?           // Предмет/дисциплина
+  format      EventFormat       // Формат проведения (Очно/Онлайн/Смешанный)
+  description String?           // Описание мероприятия
+
+  // Дата и время
+  startsAt DateTime             // Дата+время начала
+  endsAt   DateTime             // Дата+время окончания
+
+  // Аудитории
+  mainAuditoriumId    String  @db.Uuid
+  mainAuditorium      Auditorium @relation("MainAuditorium", fields: [mainAuditoriumId], references: [id])
+
+  reserveAuditoriumId String? @db.Uuid
+  reserveAuditorium   Auditorium? @relation("ReserveAuditorium", fields: [reserveAuditoriumId], references: [id])
+
+  // Участники
+  organizerName     String       // ФИО организатора*
+  organizerPosition String?      // Должность
+  expectedCount     Int?         // Ожидаемое количество участников*
+  participantType   String?      // Тип участников
+  groups            String[]     // Группы/аудитории (можно несколько)
+
+  createdAt DateTime @default(now())
+
+  @@index([mainAuditoriumId, startsAt, endsAt])
+}
