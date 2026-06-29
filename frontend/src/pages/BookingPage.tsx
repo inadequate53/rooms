@@ -276,8 +276,8 @@ export default function BookingPage({ bookingId, onDone }: BookingPageProps) {
           values.format === "offline"
             ? "ONSITE"
             : values.format === "online"
-            ? "ONLINE"
-            : "HYBRID",
+              ? "ONLINE"
+              : "HYBRID",
 
         startsAt,
         endsAt,
